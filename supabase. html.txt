@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speak SKU - บันทึกคลังสินค้า</title>
+    <script type="text/javascript" src="https://unpkg.com"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: linear-gradient(135deg, #bae6fd 0%, #2563eb 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .nav-tabs {
+            display: flex;
+            background: #172554;
+            padding: 6px;
+            gap: 6px;
+        }
+        .nav-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 8px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            color: #93c5fd;
+        }
+        .nav-tab.active {
+            background: #059669;
+            color: white;
+        }
+        .header {
+            background: #065f46;
+            color: white;
+            text-align: center;
+            padding: 16px 20px;
+        }
+        .header h2 { margin: 0; font-size: 20px; }
+        .form-body { padding: 24px; }
+        .input-group { margin-bottom: 16px; }
+        label { display: block; font-weight: bold; margin-bottom: 6px; color: #374151; font-size: 14px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background: white;
+        }
+        .sku-wrapper { display: flex; gap: 8px; }
+        .btn-scan {
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0 16px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #scanner-box {
+            display: none;
+            margin-bottom: 16px;
+            border: 3px solid #059669;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+        }
+        #video {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            display: block;
+        }
+        .scan-line {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: red;
+            box-shadow: 0 0 8px red;
+        }
+        .btn-close-scan {
+            width: 100%;
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-group { display: flex; gap: 10px; margin-top: 24px; }
+        button[type="submit"], .btn-cancel {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .btn-cancel { background: #ef4444; }
+        .btn-save { background: #059669; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="nav-tabs">
+            <a href="./index.html" class="nav-tab">📦 รับเข้า - จ่ายออก (POS)</a>
+            <a href="./stock.html" class="nav-tab active">➕ เพิ่มสินค้าใหม่ (Stock)</a>
+        </div>
+
+        <div class="header">
+            <h2>➕ เพิ่มข้อมูลสินค้า (Bplus Speak SKU)</h2>
+        </div>
+
+        <form id="productForm" class="form-body">
+            <div class="input-group">
+                <label>รหัสสินค้า (SKU)</label>
+                <div class="sku-wrapper">
+                    <input type="text" id="prodSku" required placeholder="สแกน หรือกรอกรหัสสินค้า">
+                    <button type="button" id="startScanBtn" class="btn-scan">📷 สแกน</button>
+                </div>
+            </div>
+
+            <div id="scanner-box">
+                <video id="video" playsinline autoplay muted></video>
+                <div class="scan-line"></div>
+                <button type="button" id="stopScanBtn" class="btn-close-scan">ปิดกล้องสแกน</button>
+            </div>
+
+            <div class="input-group">
+                <label>ชื่อสินค้า</label>
+                <input type="text" id="prodName" required placeholder="ระบุชื่อสินค้า">
+            </div>
+
+            <div class="input-group">
+                <label>ราคาขาย</label>
+                <input type="number" id="prodPrice" min="0" step="0.01" required placeholder="ระบุราคาขาย (บาท)">
+            </div>
+
+            <div class="input-group">
+                <label>จำนวนสต็อกเริ่มต้น</label>
+                <input type="number" id="prodStock" min="0" value="0" required placeholder="ระบุจำนวนเริ่มต้น">
+            </div>
+
+            <div class="btn-group">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('productForm').reset()">ยกเลิก</button>
+                <button type="submit" id="saveBtn" class="btn-save">บันทึกข้อมูล</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const SUPABASE_KEY = 'sb_publishable_CfgU7ZovzYdXkc2O8qtqMQ_Tx145UMn';
+                const API_URL = 'https://supabase.co';
+
+        document.getElementById('txForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'กำลังส่งข้อมูล...';
+
+            const payload = {
+                type: document.getElementById('txType').value,
+                sku: document.getElementById('txSku').value.trim(),
+                quantity: parseInt(document.getElementById('txQty').value),
+                customer_or_note: document.getElementById('txNote').value.trim()
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_KEY,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert('✅ บันทึกรายการรับเข้า-จ่ายออกสำเร็จ!');
+                    document.getElementById('txForm').reset();
+                } else {
+                    const errorDetail = await response.text();
+                    alert('❌ บันทึกไม่สำเร็จ (รหัส: ' + response.status + ')\nสาเหตุ: ' + errorDetail);
+                }
+            } catch (err) {
+                alert('⚠️ เชื่อมต่ออินเทอร์เน็ตไม่ได้: ' + err.message);
+            }
+
+            saveBtn.disabled = false;
+            saveBtn.innerText = 'ยืนยันรายการ';
+        });
+    </script>
+</body>
+</html>
