@@ -1,221 +1,285 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speak SKU - บันทึกคลังสินค้า</title>
-    <script type="text/javascript" src="https://unpkg.com"></script>
-    <style>
-        body {
-            font-family: sans-serif;
-            background: linear-gradient(135deg, #bae6fd 0%, #2563eb 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-            padding: 20px;
-        }
-        .card {
-            background: white;
-            width: 100%;
-            max-width: 420px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }
-        .nav-tabs {
-            display: flex;
-            background: #172554;
-            padding: 6px;
-            gap: 6px;
-        }
-        .nav-tab {
-            flex: 1;
-            text-align: center;
-            padding: 10px 8px;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 14px;
-            color: #93c5fd;
-        }
-        .nav-tab.active {
-            background: #059669;
-            color: white;
-        }
-        .header {
-            background: #065f46;
-            color: white;
-            text-align: center;
-            padding: 16px 20px;
-        }
-        .header h2 { margin: 0; font-size: 20px; }
-        .form-body { padding: 24px; }
-        .input-group { margin-bottom: 16px; }
-        label { display: block; font-weight: bold; margin-bottom: 6px; color: #374151; font-size: 14px; }
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 10px;
-            font-size: 16px;
-            box-sizing: border-box;
-            background: white;
-        }
-        .sku-wrapper { display: flex; gap: 8px; }
-        .btn-scan {
-            background: #059669;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 0 16px;
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        #scanner-box {
-            display: none;
-            margin-bottom: 16px;
-            border: 3px solid #059669;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-            position: relative;
-        }
-        #video {
-            width: 100%;
-            height: 240px;
-            object-fit: cover;
-            display: block;
-        }
-        .scan-line {
-            position: absolute;
-            top: 50%;
-            left: 10%;
-            right: 10%;
-            height: 2px;
-            background: red;
-            box-shadow: 0 0 8px red;
-        }
-        .btn-close-scan {
-            width: 100%;
-            background: #dc2626;
-            color: white;
-            border: none;
-            padding: 10px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn-group { display: flex; gap: 10px; margin-top: 24px; }
-        button[type="submit"], .btn-cancel {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .btn-cancel { background: #ef4444; }
-        .btn-save { background: #059669; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบ POS & Stock (Bplus Speak SKU)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body class="bg-gradient-to-b from-blue-300 to-blue-600 min-h-screen flex items-center justify-center p-4 font-sans">
 
-    <div class="card">
-        <div class="nav-tabs">
-            <a href="./index.html" class="nav-tab">📦 รับเข้า - จ่ายออก (POS)</a>
-            <a href="./stock.html" class="nav-tab active">➕ เพิ่มสินค้าใหม่ (Stock)</a>
-        </div>
-
-        <div class="header">
-            <h2>➕ เพิ่มข้อมูลสินค้า (Bplus Speak SKU)</h2>
-        </div>
-
-        <form id="productForm" class="form-body">
-            <div class="input-group">
-                <label>รหัสสินค้า (SKU)</label>
-                <div class="sku-wrapper">
-                    <input type="text" id="prodSku" required placeholder="สแกน หรือกรอกรหัสสินค้า">
-                    <button type="button" id="startScanBtn" class="btn-scan">📷 สแกน</button>
-                </div>
-            </div>
-
-            <div id="scanner-box">
-                <video id="video" playsinline autoplay muted></video>
-                <div class="scan-line"></div>
-                <button type="button" id="stopScanBtn" class="btn-close-scan">ปิดกล้องสแกน</button>
-            </div>
-
-            <div class="input-group">
-                <label>ชื่อสินค้า</label>
-                <input type="text" id="prodName" required placeholder="ระบุชื่อสินค้า">
-            </div>
-
-            <div class="input-group">
-                <label>ราคาขาย</label>
-                <input type="number" id="prodPrice" min="0" step="0.01" required placeholder="ระบุราคาขาย (บาท)">
-            </div>
-
-            <div class="input-group">
-                <label>จำนวนสต็อกเริ่มต้น</label>
-                <input type="number" id="prodStock" min="0" value="0" required placeholder="ระบุจำนวนเริ่มต้น">
-            </div>
-
-            <div class="btn-group">
-                <button type="button" class="btn-cancel" onclick="document.getElementById('productForm').reset()">ยกเลิก</button>
-                <button type="submit" id="saveBtn" class="btn-save">บันทึกข้อมูล</button>
-            </div>
-        </form>
+  <div class="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
+    
+    <!-- แถบเมนูสลับแท็บด้านบน -->
+    <div class="bg-[#242f4d] px-3 py-3 flex justify-between items-center gap-2">
+      <button type="button" id="tabPosBtn" onclick="switchTab('pos')" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition bg-[#128b63] text-white shadow">
+        📦 รับเข้า - จ่ายออก (POS)
+      </button>
+      <button type="button" id="tabStockBtn" onclick="switchTab('stock')" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition text-blue-200 hover:bg-white/10">
+        ➕ เพิ่มสินค้าใหม่ (Stock)
+      </button>
     </div>
 
-    <script>
-        const SUPABASE_KEY = 'sb_publishable_CfgU7ZovzYdXkc2O8qtqMQ_Tx145UMn';
-                const API_URL = 'https://supabase.co';
+    <!-- แถบหัวข้อสีเขียว -->
+    <div id="headerTitle" class="bg-[#10704e] text-white px-5 py-3 font-bold text-lg shadow-inner">
+      📦 บันทึกรับเข้า - จ่ายออก (POS)
+    </div>
 
-        document.getElementById('txForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const saveBtn = document.getElementById('saveBtn');
-            saveBtn.disabled = true;
-            saveBtn.innerText = 'กำลังส่งข้อมูล...';
+    <!-- พื้นที่กล้องสแกนบาร์โค้ด (ใช้ร่วมกันทั้ง 2 แท็บ) -->
+    <div id="scannerContainer" class="hidden px-6 pt-4">
+      <div id="reader" class="w-full rounded-lg overflow-hidden border-2 border-green-500"></div>
+      <button type="button" onclick="stopScanner()" class="mt-2 w-full bg-gray-600 text-white py-1.5 rounded-lg text-sm font-bold hover:bg-gray-700">
+        ปิดกล้อง
+      </button>
+    </div>
 
-            const payload = {
-                type: document.getElementById('txType').value,
-                sku: document.getElementById('txSku').value.trim(),
-                quantity: parseInt(document.getElementById('txQty').value),
-                customer_or_note: document.getElementById('txNote').value.trim()
-            };
+    <!-- ==================== แท็บ 1: รับเข้า - จ่ายออก (POS) ==================== -->
+    <form id="posForm" onsubmit="submitPosForm(event)" class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-1">ประเภทรายการ</label>
+        <select id="posType" required class="w-full border border-gray-300 rounded-lg p-2.5 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="จ่ายออก">🔴 จ่ายออก / ขายสินค้า (ตัดสต็อก)</option>
+          <option value="รับเข้า">🟢 รับเข้า / เพิ่มสินค้า (เพิ่มสต็อก)</option>
+        </select>
+      </div>
 
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': 'Bearer ' + SUPABASE_KEY,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify(payload)
-                });
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-1">รหัสสินค้า (SKU)</label>
+        <div class="flex gap-2">
+          <input type="text" id="posSku" required placeholder="สแกนหรือกรอกรหัส SKU" class="flex-1 border border-gray-300 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onclick="startScanner('posSku')" class="bg-[#128b63] text-white px-3 rounded-lg font-bold hover:bg-[#0f7352]" title="สแกนบาร์โค้ด">
+            <i class="fa-solid fa-camera"></i>
+          </button>
+          <button type="button" onclick="startVoice('posSku', true)" class="bg-gray-100 border border-gray-300 px-3 rounded-lg text-red-500 hover:bg-gray-200" title="พูดรหัสสินค้า">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+      </div>
 
-                if (response.ok) {
-                    alert('✅ บันทึกรายการรับเข้า-จ่ายออกสำเร็จ!');
-                    document.getElementById('txForm').reset();
-                } else {
-                    const errorDetail = await response.text();
-                    alert('❌ บันทึกไม่สำเร็จ (รหัส: ' + response.status + ')\nสาเหตุ: ' + errorDetail);
-                }
-            } catch (err) {
-                alert('⚠️ เชื่อมต่ออินเทอร์เน็ตไม่ได้: ' + err.message);
-            }
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-1">จำนวน (ชิ้น)</label>
+        <div class="flex gap-2">
+          <input type="number" id="posQty" required min="1" placeholder="ระบุจำนวนสินค้า" class="flex-1 border border-gray-300 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onclick="startVoice('posQty', true)" class="bg-gray-100 border border-gray-300 px-3 rounded-lg text-red-500 hover:bg-gray-200" title="พูดจำนวน">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+      </div>
 
-            saveBtn.disabled = false;
-            saveBtn.innerText = 'ยืนยันรายการ';
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อลูกค้า / หมายเหตุ</label>
+        <div class="flex gap-2">
+          <input type="text" id="posNote" placeholder="เช่น ชื่อลูกค้า, ขายหน้าร้าน" class="flex-1 border border-gray-300 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onclick="startVoice('posNote', false)" class="bg-gray-100 border border-gray-300 px-3 rounded-lg text-red-500 hover:bg-gray-200" title="พูดหมายเหตุ">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex gap-4 pt-3">
+        <button type="button" onclick="document.getElementById('posForm').reset()" class="w-1/2 bg-[#ef4444] text-white py-3 rounded-xl font-bold hover:bg-red-600 transition shadow-md">
+          ยกเลิก
+        </button>
+        <button type="submit" class="w-1/2 bg-[#10b981] text-white py-3 rounded-xl font-bold hover:bg-green-600 transition shadow-md">
+          ยืนยันรายการ
+        </button>
+      </div>
+    </form>
+
+    <!-- ==================== แท็บ 2: เพิ่มสินค้าใหม่ (Stock) ==================== -->
+    <form id="stockForm" onsubmit="submitStockForm(event)" class="hidden p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-1">รหัสสินค้า (SKU)</label>
+        <div class="flex gap-2">
+          <input type="text" id="stockSku" required placeholder="สแกน หรือกรอกรหัสสินค้า" class="flex-1 border border-gray-300 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onclick="startScanner('stockSku')" class="bg-[#128b63] text-white px-4 rounded-lg font-bold text-sm hover:bg-[#0f7352] whitespace-nowrap">
+            📷 สแกน
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อสินค้า</label>
+        <div class="flex gap-2">
+          <input type="text" id="stockName" required placeholder="ระบุชื่อสินค้า" class="flex-1 border border-gray-300 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onclick="startVoice('stockName', false)" class="bg-gray-100 border border-gray-300 px-3 rounded-lg text-red-500 hover:bg-gray-200" title="พูดชื่อสินค้า">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-1">ราคาขาย</label>
+        <div class="flex gap-2">
+          <input type="number" id="stockPrice" required min="0" step="0.01" placeholder="ระบุราคาขาย (บาท)" class="flex-1 border border-gray-300 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" onclick="startVoice('stockPrice', true)" class="bg-gray-100 border border-gray-300 px-3 rounded-lg text-red-500 hover:bg-gray-200" title="พูดราคาขาย">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-bold text-gray-700 mb-1">จำนวนสต็อกเริ่มต้น</label>
+        <input type="number" id="stockInitial" required min="0" value="0" class="w-full border border-gray-300 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div class="flex gap-4 pt-3">
+        <button type="button" onclick="document.getElementById('stockForm').reset()" class="w-1/2 bg-[#ef4444] text-white py-3 rounded-xl font-bold hover:bg-red-600 transition shadow-md">
+          ยกเลิก
+        </button>
+        <button type="submit" class="w-1/2 bg-[#10b981] text-white py-3 rounded-xl font-bold hover:bg-green-600 transition shadow-md">
+          บันทึกข้อมูล
+        </button>
+      </div>
+    </form>
+
+  </div>
+
+  <script>
+    // ⚠️ นำ URL ของ Google Apps Script Web App มาวางตรงนี้
+    const GAS_WEB_APP_URL = "วาง_URL_ของ_GOOGLE_APPS_SCRIPT_ที่นี่";
+
+    // --- 1. ระบบสลับแท็บ (ไม่เปลี่ยนหน้า ไม่ติด 404) ---
+    function switchTab(tab) {
+      stopScanner();
+      const posForm = document.getElementById('posForm');
+      const stockForm = document.getElementById('stockForm');
+      const tabPosBtn = document.getElementById('tabPosBtn');
+      const tabStockBtn = document.getElementById('tabStockBtn');
+      const headerTitle = document.getElementById('headerTitle');
+
+      if (tab === 'pos') {
+        posForm.classList.remove('hidden');
+        stockForm.classList.add('hidden');
+        tabPosBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition bg-[#128b63] text-white shadow";
+        tabStockBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition text-blue-200 hover:bg-white/10";
+        headerTitle.innerText = "📦 บันทึกรับเข้า - จ่ายออก (POS)";
+      } else {
+        posForm.classList.add('hidden');
+        stockForm.classList.remove('hidden');
+        tabStockBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition bg-[#128b63] text-white shadow";
+        tabPosBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition text-blue-200 hover:bg-white/10";
+        headerTitle.innerText = "➕ เพิ่มข้อมูลสินค้า (Bplus Speak SKU)";
+      }
+    }
+
+    // --- 2. ระบบสแกนบาร์โค้ดผ่านกล้อง ---
+    let html5QrCode = null;
+    let currentTargetInput = null;
+
+    function startScanner(targetInputId) {
+      currentTargetInput = targetInputId;
+      document.getElementById('scannerContainer').classList.remove('hidden');
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        (decodedText) => {
+          document.getElementById(currentTargetInput).value = decodedText;
+          stopScanner();
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'สแกนสำเร็จ: ' + decodedText, showConfirmButton: false, timer: 1500 });
+        },
+        (errorMessage) => { /* ทำงานเบื้องหลัง */ }
+      ).catch(err => {
+        Swal.fire('ไม่สามารถเปิดกล้องได้', 'กรุณาอนุญาตสิทธิ์กล้องในเบราว์เซอร์ (Chrome/Safari)', 'error');
+        document.getElementById('scannerContainer').classList.add('hidden');
+      });
+    }
+
+    function stopScanner() {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+          document.getElementById('scannerContainer').classList.add('hidden');
+        }).catch(() => {});
+      } else {
+        document.getElementById('scannerContainer').classList.add('hidden');
+      }
+    }
+
+    // --- 3. ระบบสั่งงานด้วยเสียง ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    function startVoice(inputId, removeSpaces) {
+      if (!SpeechRecognition) {
+        Swal.fire('ไม่รองรับ', 'เบราว์เซอร์นี้ไม่รองรับการสั่งงานด้วยเสียง แนะนำใช้ Chrome', 'warning');
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'th-TH';
+      recognition.interimResults = false;
+
+      Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: '🎤 กำลังฟังเสียง...', showConfirmButton: false, timer: 3000 });
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        let transcript = event.results[0][0].transcript;
+        if (removeSpaces) {
+          transcript = transcript.replace(/\s+/g, '');
+        }
+        document.getElementById(inputId).value = transcript;
+      };
+
+      recognition.onerror = function() {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'ไม่สามารถรับเสียงได้', showConfirmButton: false, timer: 2000 });
+      };
+    }
+
+    // --- 4. ส่งข้อมูลไปบันทึกที่ Google Sheets ผ่าน fetch() ---
+    async function sendToGoogleSheet(payload, formId) {
+      if (GAS_WEB_APP_URL === "วาง_URL_ของ_GOOGLE_APPS_SCRIPT_ที่นี่") {
+        Swal.fire('ยังไม่ได้ใส่ URL', 'กรุณานำ URL ของ Google Apps Script มาใส่ในโค้ด index.html ก่อนครับ', 'warning');
+        return;
+      }
+
+      Swal.fire({ title: 'กำลังบันทึกข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
         });
-    </script>
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          Swal.fire('สำเร็จ!', result.message, 'success');
+          document.getElementById(formId).reset();
+        } else {
+          Swal.fire('ข้อผิดพลาด', result.message, 'error');
+        }
+      } catch (err) {
+        Swal.fire('เชื่อมต่อไม่สำเร็จ', 'ตรวจสอบการตั้งค่า Deploy เป็น "ทุกคน (Anyone)" ใน Apps Script', 'error');
+      }
+    }
+
+    function submitPosForm(event) {
+      event.preventDefault();
+      sendToGoogleSheet({
+        action: 'pos',
+        type: document.getElementById('posType').value,
+        sku: document.getElementById('posSku').value,
+        qty: document.getElementById('posQty').value,
+        note: document.getElementById('posNote').value
+      }, 'posForm');
+    }
+
+    function submitStockForm(event) {
+      event.preventDefault();
+      sendToGoogleSheet({
+        action: 'add_product',
+        sku: document.getElementById('stockSku').value,
+        name: document.getElementById('stockName').value,
+        price: document.getElementById('stockPrice').value,
+        stock: document.getElementById('stockInitial').value
+      }, 'stockForm');
+    }
+  </script>
 </body>
 </html>
